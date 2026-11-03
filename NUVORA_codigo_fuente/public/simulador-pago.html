@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Simulador de pago</title>
+<link rel="stylesheet" href="/css/sigilo.css">
+<link rel="icon" type="image/png" href="/img/nuvora-icono.png">
+</head>
+<body>
+<div class="centro-pantalla"><div class="angosto pila" style="width:100%">
+  <div class="superficie pila" id="simulador">
+    <h1>Simulador de pago</h1>
+    <p class="aviso">Solo existe en pruebas. En producción, este paso ocurre en la página de Conekta y este simulador no responde.</p>
+    <p id="simulador-monto" class="tenue"></p>
+    <p class="error" data-error role="alert"></p>
+    <div class="fila">
+      <button class="boton" id="b-simular-tarjeta">Pagar con tarjeta</button>
+      <button class="boton secundario" id="b-simular-rechazo">Simular rechazo</button>
+    </div>
+  </div>
+</div></div>
+<script type="module" src="/js/simulador-pago.js"></script>
+</body>
+</html>

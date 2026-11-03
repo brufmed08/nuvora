@@ -1,0 +1,26 @@
+{
+  "name": "nuvora",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Expediente clínico electrónico multi-consultorio con cifrado que solo abre el médico",
+  "scripts": {
+    "test": "node --import tsx --test tests/*.test.mts",
+    "construir:demo": "node scripts/construir-demo.mjs",
+    "construir:vendor": "node scripts/construir-vendor.mjs"
+  },
+  "engines": { "node": ">=20.12" },
+  "dependencies": {
+    "@netlify/database": "2.0.1",
+    "@netlify/functions": "^5.1.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "who-growth-standards": "1.0.1"
+  }
+}

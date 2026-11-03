@@ -1,0 +1,15 @@
+WHO Child Growth Standards data
+================================
+
+The reference tables bundled in src/data/ are published by the World Health
+Organization as part of the WHO Child Growth Standards and are reproduced
+here for computational use.
+
+Source: https://www.who.int/tools/child-growth-standards
+
+This project is not affiliated with, endorsed by, or certified by the World
+Health Organization. The MIT license in LICENSE applies to the source code of
+this package; the underlying reference data remains the work of the WHO.
+
+The tables are generated, never edited by hand — see scripts/generate-data.py
+for the exact source URLs and the regeneration procedure.

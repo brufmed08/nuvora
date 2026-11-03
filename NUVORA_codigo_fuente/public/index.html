@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUVORA: expediente clínico privado para consultorios</title>
+<meta name="description" content="Expediente clínico electrónico con cifrado en tu navegador, recetas con tu logo y curvas de crecimiento. Tus notas solo las lee tu consultorio.">
+<link rel="stylesheet" href="/css/sigilo.css">
+<link rel="icon" type="image/png" href="/img/nuvora-icono.png">
+</head>
+<body class="pagina">
+<div id="pagina-venta">
+<div class="envoltura">
+  <header class="cabecera">
+    <a class="logotipo" href="/"><img class="logo" src="/img/nuvora-logo.png" alt="NUVORA Health" width="145" height="46"></a>
+    <nav class="fila">
+      <a href="#planes">Planes</a>
+      <a class="boton secundario" href="/app.html">Entrar</a>
+    </nav>
+  </header>
+
+  <section class="heroe">
+    <div class="pila">
+      <h1>El expediente clínico que solo tu consultorio puede leer.</h1>
+      <p class="entrada">Notas de evolución, recetas con tu logo y curvas de crecimiento. Todo se cifra en tu navegador antes de guardarse. Nuestro equipo y nuestra nube solo reciben texto ilegible.</p>
+      <div class="fila">
+        <a class="boton" href="#planes">Ver planes</a>
+        <a class="boton secundario" href="/demo.html" data-demo>Probar la demostración</a>
+      </div>
+      <p class="tenue chico">Acceso automático al confirmarse tu pago. Con datos ficticios puedes probarlo antes de comprar.</p>
+    </div>
+
+    <div class="miradas" aria-label="El mismo expediente visto por tres personas">
+      <div role="tablist" aria-label="Quién mira">
+        <button role="tab" id="pestana-medico" aria-selected="true" aria-controls="mirada-medico">Tu consultorio</button>
+        <button role="tab" id="pestana-soporte" aria-selected="false" aria-controls="mirada-soporte">Soporte</button>
+        <button role="tab" id="pestana-nube" aria-selected="false" aria-controls="mirada-nube">La nube</button>
+      </div>
+      <div class="mirada" role="tabpanel" id="mirada-medico" aria-labelledby="pestana-medico">
+        <h3>Nota de evolución</h3>
+        <dl>
+          <dt>Paciente</dt><dd>Valeria Mendoza Ruiz, 2 años 3 meses</dd>
+          <dt>Motivo</dt><dd>Tos y fiebre de dos días</dd>
+          <dt>Medidas</dt><dd>Peso 12.4 kg · Temp 38.1 °C · SatO₂ 97%</dd>
+          <dt>Diagnóstico</dt><dd>Faringoamigdalitis aguda</dd>
+          <dt>Receta</dt><dd>Paracetamol suspensión, 5.5 ml cada 6 horas si hay fiebre</dd>
+        </dl>
+        <p class="tenue chico">Paciente de ejemplo. Lo lees completo porque tu contraseña abre la llave de tu consultorio.</p>
+      </div>
+      <div class="mirada" role="tabpanel" id="mirada-soporte" aria-labelledby="pestana-soporte" hidden>
+        <h3>Panel de soporte</h3>
+        <dl>
+          <dt>Paciente</dt><dd>Valeria Mendoza Ruiz</dd>
+          <dt>Última consulta</dt><dd>28 oct 2026, 10:42</dd>
+          <dt>Última receta</dt><dd>28 oct 2026, 10:44</dd>
+        </dl>
+        <p class="tenue chico">Nada más. Para abrir esta lista, el agente debe escribir un motivo, y tú lo ves en tu bitácora.</p>
+      </div>
+      <div class="mirada" role="tabpanel" id="mirada-nube" aria-labelledby="pestana-nube" hidden>
+        <h3>Lo que guarda el servidor</h3>
+        <p class="cifrado">v1.q7TnZ0k3mWc2Rb8x.Hf2pX9vYtL0sQe4NwUa7JmB1zKd6CrG3oTi8VyF5nS+PjE2lMhR9uAq4bWx7Zc1DkOt6IgY3sNv0fLp8eQmU5rHa2TjB9yKw4XoG7dCz1VnS6iFtP3mEqR8uLh0JbA5yNg2WkDx+7sOc4ZfT9vIeQ1pMr6HaU3nGjK8wYtB0lXoS5dCz2VqF7iPmE4uRh9LbAy1NgJk6Tw3DxO+scZ8fT</p>
+        <p class="tenue chico">Una copia de la base de datos no sirve para leer expedientes. La llave nunca sale de tu navegador.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="seccion"><div class="envoltura">
+  <h2 class="titulo">Empiezas en minutos</h2>
+  <ol class="pasos">
+    <li><strong>Elige un plan y paga</strong><span class="tenue">Con tarjeta, SPEI o efectivo, en la página segura de nuestra pasarela.</span></li>
+    <li><strong>Crea tu contraseña</strong><span class="tenue">Al confirmarse el pago recibes tu acceso. También te damos un código de recuperación que debes guardar.</span></li>
+    <li><strong>Personaliza y registra</strong><span class="tenue">Sube tu logo, agrega a tu equipo con sus propios usuarios y abre tu primer expediente.</span></li>
+  </ol>
+</div></section>
+
+<section class="seccion"><div class="envoltura">
+  <h2 class="titulo">Lo que hace por tu consulta</h2>
+  <div class="rejilla" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px">
+    <div class="pila-chica"><h3>Notas que conservan su historia</h3><p class="tenue">Una nota guardada no se altera. Si te equivocas, la anulas y queda visible, con hora puesta por el servidor.</p></div>
+    <div class="pila-chica"><h3>Recetas con tu marca</h3><p class="tenue">Tu logo, tus colores y tus cédulas. Lista para imprimir o guardar en PDF desde la nota.</p></div>
+    <div class="pila-chica"><h3>Un usuario por persona</h3><p class="tenue">Cada médico y asistente entra con su contraseña. Quien asiste registra medidas, pero no lee notas clínicas.</p></div>
+    <div class="pila-chica"><h3>Curvas de crecimiento OMS</h3><p class="tenue">Peso, talla, perímetro cefálico e IMC, con percentil, puntaje z y edad corregida para prematuros. Calculadas con los patrones publicados por la OMS, que no avala este producto.</p></div>
+    <div class="pila-chica"><h3>Enlace para la familia</h3><p class="tenue">Envía la receta por WhatsApp con un enlace cifrado que vence. Puedes revocarlo cuando quieras.</p></div>
+    <div class="pila-chica"><h3>Tus datos siguen siendo tuyos</h3><p class="tenue">Exporta todo cuando quieras. Si dejas de pagar, conservas el acceso de lectura y exportación.</p></div>
+  </div>
+</div></section>
+
+<section class="seccion" id="planes"><div class="envoltura">
+  <h2 class="titulo">Planes</h2>
+  <p class="bajada">Precios en pesos mexicanos con IVA incluido. El pago anual equivale a diez meses.</p>
+  <div class="fila" style="margin-bottom:16px">
+    <div class="selector-ciclo" role="group" aria-label="Periodo de pago">
+      <button id="ciclo-mensual" aria-pressed="true" data-ciclo="mensual">Mensual</button>
+      <button id="ciclo-anual" aria-pressed="false" data-ciclo="anual">Anual</button>
+    </div>
+  </div>
+  <div class="desborde"><table class="tabla-planes">
+    <thead><tr>
+      <th></th>
+      <th>Esencial<span class="precio" data-precio="esencial">$349</span><span class="tenue chico" data-periodo>al mes</span></th>
+      <th>Profesional<span class="precio" data-precio="profesional">$549</span><span class="tenue chico" data-periodo>al mes</span></th>
+      <th>Clínica<span class="precio" data-precio="clinica">$1,490</span><span class="tenue chico" data-periodo>al mes</span></th>
+    </tr></thead>
+    <tbody>
+      <tr><td>Médicos incluidos</td><td>1</td><td>1</td><td>5</td></tr>
+      <tr><td>Asistentes incluidos</td><td>1</td><td>2</td><td>5</td></tr>
+      <tr><td>Pacientes</td><td>Sin límite</td><td>Sin límite</td><td>Sin límite</td></tr>
+      <tr><td>Notas de evolución y recetas con tu logo</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td>Bitácora y exportación completa</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td>Curvas de crecimiento OMS</td><td>No</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td>Enlace para la familia</td><td>No</td><td>Sí</td><td>Sí</td></tr>
+      <tr><td></td>
+        <td><button class="boton" data-comprar="esencial" aria-label="Contratar plan Esencial">Contratar</button></td>
+        <td><button class="boton" data-comprar="profesional" aria-label="Contratar plan Profesional">Contratar</button></td>
+        <td><button class="boton" data-comprar="clinica" aria-label="Contratar plan Clínica">Contratar</button></td>
+      </tr>
+    </tbody>
+  </table></div>
+</div></section>
+
+<section class="seccion"><div class="envoltura">
+  <h2 class="titulo">Preguntas frecuentes</h2>
+  <details><summary>¿Qué ve exactamente el equipo de soporte?</summary><p>El nombre del paciente, y la fecha y hora de su última consulta y de su última receta. No puede abrir notas, diagnósticos, medicamentos ni fichas, porque no tiene la llave. Cada vez que abre la lista debe escribir un motivo, y tú lo ves en tu bitácora.</p></details>
+  <details><summary>¿Y si olvido mi contraseña?</summary><p>Si eres titular, la recuperas con tu código de recuperación. A médicos y asistentes se las restablece el titular. Si el titular pierde contraseña y código, nadie puede abrir esos expedientes, ni nosotros. Ese es el costo real de esta privacidad, por eso te pedimos guardar el código y hacer respaldos.</p></details>
+  <details><summary>¿Qué tarjetas aceptan?</summary><p>Visa, Mastercard, American Express y Carnet, además de SPEI y efectivo en tiendas. Las tarjetas empresariales o de prepago funcionan si su emisor las permite en compras en línea. Las de vales de despensa están limitadas por su reglamento a la compra de despensa, así que el emisor puede rechazarlas.</p></details>
+  <details><summary>¿Dónde se guardan mis datos?</summary><p>En la nube de nuestro proveedor, en Estados Unidos. El contenido clínico llega ya cifrado. El servidor sí conoce datos de tu cuenta, cuántos pacientes tienes, las fechas de actividad y el tamaño de la información. Los nombres de pacientes se guardan sellados y solo se abren en el navegador de un agente de soporte.</p></details>
+  <details><summary>¿Cumple con las normas de expediente clínico?</summary><p>NUVORA está diseñado tomando en cuenta la NOM-004 y la NOM-024: autenticación, roles, bitácora, CURP sin autogenerar y notas inalterables. Todavía no cuenta con el certificado de la DGIS para la NOM-024. Lo anunciaremos aquí cuando lo tengamos. El cumplimiento del expediente sigue siendo responsabilidad del médico.</p></details>
+  <details><summary>¿Qué pasa si dejo de pagar?</summary><p>Tienes siete días de gracia. Después la cuenta queda en solo lectura: puedes consultar y exportar, pero no registrar. Tus expedientes no se borran por falta de pago.</p></details>
+  <details><summary>¿Emiten factura?</summary><p>Sí. Escríbenos desde el correo de tu cuenta con tus datos fiscales y te enviamos la factura de cada pago. Estamos preparando que se emita sola.</p></details>
+</div></section>
+
+<footer class="pie"><div class="envoltura fila-entre">
+  <span>NUVORA es un producto de NUVORA Health Technologies. Contacto: [correo por definir].</span>
+  <nav class="fila">
+    <a href="/legal/terminos.html">Términos</a>
+    <a href="/legal/privacidad.html">Aviso de privacidad</a>
+    <a href="/legal/encargo.html">Contrato de encargo de datos</a>
+  </nav>
+</div></footer>
+
+<dialog id="dialogo-compra" aria-labelledby="titulo-compra">
+  <form id="f-compra" class="pila">
+    <h2 id="titulo-compra">Contratar plan</h2>
+    <div class="rejilla">
+      <label class="campo">Plan<select id="compra-plan" name="plan">
+        <option value="esencial">Esencial</option>
+        <option value="profesional">Profesional</option>
+        <option value="clinica">Clínica</option>
+      </select></label>
+      <label class="campo">Periodo<select id="compra-ciclo" name="ciclo">
+        <option value="mensual">Mensual</option>
+        <option value="anual">Anual, dos meses gratis</option>
+      </select></label>
+    </div>
+    <p id="compra-total" class="tenue"></p>
+    <label class="campo">Nombre del consultorio<input id="compra-consultorio" name="nombre_consultorio" required maxlength="160"></label>
+    <label class="campo">Tu nombre completo<input id="compra-nombre" name="nombre_medico" required maxlength="160"></label>
+    <label class="campo">Correo, será tu usuario<input id="compra-correo" name="email" type="email" required></label>
+    <label class="campo">Teléfono<input id="compra-telefono" name="telefono" type="tel" maxlength="20"></label>
+    <label class="campo">¿Cómo nos conociste? (opcional)<select id="compra-origen" name="origen">
+      <option value=""></option>
+      <option value="colega">Un colega me lo recomendó</option>
+      <option value="congreso">Un congreso o evento</option>
+      <option value="asociacion">Mi colegio o asociación</option>
+      <option value="busqueda">Búsqueda en internet</option>
+      <option value="redes">Redes sociales</option>
+      <option value="anuncio">Un anuncio</option>
+      <option value="otro">Otro</option>
+    </select></label>
+    <label class="fila chico"><input id="compra-recurrente" name="recurrente" type="checkbox"> Cobrar automáticamente con mi tarjeta cada periodo</label>
+    <label class="fila chico"><input id="compra-terminos" name="acepto" type="checkbox" required> Acepto los <a href="/legal/terminos.html" target="_blank" rel="noopener">términos</a>, el <a href="/legal/privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a> y el <a href="/legal/encargo.html" target="_blank" rel="noopener">contrato de encargo de datos</a>.</label>
+    <p class="error" data-error role="alert"></p>
+    <div class="fila"><button class="boton" type="submit">Ir a pagar</button><button class="boton secundario" type="button" id="b-cancelar-compra">Cancelar</button></div>
+    <p class="tenue chico">El pago se realiza en la página segura de nuestra pasarela. Nunca vemos el número de tu tarjeta.</p>
+  </form>
+</dialog>
+</div>
+<script type="module" src="/js/landing.js"></script>
+</body>
+</html>
