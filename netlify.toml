@@ -1,4 +1,6 @@
 [build]
+  # The application lives in this subfolder; publish and functions paths are relative to it.
+  base = "NUVORA_codigo_fuente"
   publish = "public"
   functions = "netlify/functions"
 
