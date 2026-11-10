@@ -14,3 +14,19 @@
     Referrer-Policy = "no-referrer"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# Accesos cortos: la cuenta maestra y el expediente de cada consultorio.
+[[redirects]]
+  from = "/maestro"
+  to = "/soporte.html"
+  status = 301
+
+[[redirects]]
+  from = "/expediente"
+  to = "/app.html"
+  status = 301
+
+[[redirects]]
+  from = "/prueba-gratis"
+  to = "/prueba.html"
+  status = 301

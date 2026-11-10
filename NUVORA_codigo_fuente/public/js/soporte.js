@@ -20,7 +20,7 @@ function marco(contenido) {
     <div class="marca-consultorio"><img class="logo-icono" src="/img/nuvora-icono.png" alt=""><span>Soporte</span></div>
     <nav aria-label="Principal">
       <a href="#" data-ir="consultorios">Consultorios</a>
-      ${estado.usuario.rol === "administrador" ? h`<a href="#" data-ir="metricas">Métricas</a><a href="#" data-ir="agentes">Agentes</a>` : ""}
+      ${estado.usuario.rol === "administrador" ? h`<a href="#" data-ir="pruebas">Pruebas gratis</a><a href="#" data-ir="metricas">Métricas</a><a href="#" data-ir="agentes">Agentes</a>` : ""}
       <span class="tenue chico" style="padding:6px 10px">${estado.usuario.nombre}</span>
       <button class="boton discreto" data-accion="salir">Salir</button>
     </nav>
@@ -70,7 +70,7 @@ function vistaEntrar(aviso) {
     estado.privada = await cripto.importarPrivadaSoporte(estado.privadaBytes);
     estado.kdf = { sal: r.kdf_sal, iter: r.kdf_iter };
     if (r.usuario.debe_cambiar) vistaCambiar();
-    else await vistaConsultorios();
+    else await vistaInicial();
   });
 }
 
@@ -141,7 +141,7 @@ function vistaCambiar() {
     await api("POST", "/api/soporte/cambiar", { auth_key_actual: anterior.authKey, kdf_sal: sal, kdf_iter: cripto.ITERACIONES, auth_key: d.authKey, llave_envuelta: await cripto.envolverPrivadaSoporte(estado.privadaBytes, d.llaveEnvoltura) });
     estado.usuario.debe_cambiar = false;
     estado.kdf = { sal, iter: cripto.ITERACIONES };
-    await vistaConsultorios();
+    await vistaInicial();
   });
 }
 
@@ -151,7 +151,7 @@ function filasConsultorios(lista) {
     (c) => h`<tr>
       <td><strong>${c.nombre}</strong><br><span class="tenue chico">${c.contacto_email}</span></td>
       <td>${c.plan_nombre}, ${c.ciclo}</td>
-      <td><span class="insignia ${c.estado === "activo" ? "ok" : c.estado === "gracia" || c.estado === "solo_lectura" ? "alerta" : ""}">${ESTADOS[c.estado]}</span></td>
+      <td><span class="insignia ${c.estado === "activo" ? "ok" : c.estado === "gracia" || c.estado === "solo_lectura" ? "alerta" : ""}">${ESTADOS[c.estado]}</span>${c.en_prueba ? h` <span class="insignia">Prueba gratis</span>` : ""}</td>
       <td>${fecha(c.pagado_hasta)}</td>
       <td>${c.n_pacientes}</td>
       <td><button class="boton secundario" data-accion="abrir" data-id="${c.id}" data-nombre="${c.nombre}">Ver pacientes</button></td>
@@ -278,6 +278,145 @@ function vistaAgentes() {
   });
 }
 
+
+// ---------------------------------------------------------------------------
+// Pruebas gratis de 3 meses: solo la cuenta maestra (administrador) genera códigos y autoriza.
+// ---------------------------------------------------------------------------
+
+const PLANES_PRUEBA = { esencial: "Esencial", profesional: "Profesional", clinica: "Clínica" };
+const ESTADOS_PRUEBA = { pendiente: "Por autorizar", aprobada: "Autorizada", rechazada: "Rechazada" };
+const AVISOS = { enviado: "WhatsApp enviado", fallido: "WhatsApp falló", sin_configurar: "WhatsApp sin configurar" };
+
+async function vistaInicial() {
+  if (estado.usuario.rol === "administrador" && location.hash === "#pruebas") return vistaPruebas();
+  return vistaConsultorios();
+}
+
+const enlacePrueba = (codigo) => `${location.origin}/prueba.html?codigo=${encodeURIComponent(codigo)}`;
+
+function filaSolicitud(s) {
+  const pendiente = s.estado === "pendiente";
+  return h`<div class="superficie pila-chica">
+    <div class="fila-entre"><strong>${s.nombre_medico} · ${s.nombre_consultorio}</strong>
+      <span class="insignia ${s.estado === "aprobada" ? "ok" : pendiente ? "alerta" : ""}">${ESTADOS_PRUEBA[s.estado]}</span></div>
+    <span class="tenue chico">${s.email} · ${s.telefono ?? ""}${s.especialidad ? ` · ${s.especialidad}` : ""}${s.ciudad ? ` · ${s.ciudad}` : ""}</span>
+    <span class="tenue chico">Código ${s.codigo} · ${fechaHora(s.creado_en)}${s.aviso_whatsapp ? ` · ${AVISOS[s.aviso_whatsapp] ?? s.aviso_whatsapp}` : ""}</span>
+    <p style="white-space:pre-wrap;margin:6px 0">${s.necesidades}</p>
+    ${
+      pendiente
+        ? h`<div class="fila">
+            <label class="campo" style="min-width:200px">Plan<select data-plan-de="${s.id}">
+              ${Object.entries(PLANES_PRUEBA).map(([id, nombre]) => h`<option value="${id}" ${id === s.plan ? "selected" : ""}>${nombre}</option>`)}
+            </select></label>
+            <button class="boton" data-accion="prueba-aprobar" data-id="${s.id}">Autorizar 3 meses gratis</button>
+            <button class="boton secundario" data-accion="prueba-rechazar" data-id="${s.id}">Rechazar</button>
+          </div><div data-resultado="${s.id}"></div>`
+        : h`<span class="chico">Plan ${PLANES_PRUEBA[s.plan]}${s.estado === "aprobada" && s.pagado_hasta ? `, gratis hasta el ${fecha(s.pagado_hasta)}` : ""}${s.nota_revision ? ` · ${s.nota_revision}` : ""}</span>`
+    }
+  </div>`;
+}
+
+async function vistaPruebas() {
+  const [{ solicitudes }, { codigos }] = await Promise.all([
+    api("GET", "/api/soporte/pruebas/solicitudes"),
+    api("GET", "/api/soporte/pruebas/codigos"),
+  ]);
+  const pendientes = solicitudes.filter((s) => s.estado === "pendiente").length;
+  pintar(
+    estado.raiz,
+    marco(h`<h1>Pruebas gratis de 3 meses</h1>
+      <div class="superficie pila-chica">
+        <span>Enlace de inscripción: <code>${location.origin}/prueba.html</code></span>
+        <span class="tenue chico">Solo entra quien tenga un código tuyo. Cada solicitud te llega por WhatsApp y nadie recibe acceso hasta que la autorizas aquí.</span>
+      </div>
+      <h2>Solicitudes${pendientes ? ` (${pendientes} por autorizar)` : ""}</h2>
+      ${solicitudes.length ? solicitudes.map(filaSolicitud) : h`<p class="tenue">Todavía no hay solicitudes.</p>`}
+      <h2>Generar códigos</h2>
+      <form id="f-codigos" class="superficie pila angosto">
+        <div class="rejilla">
+          <label class="campo">Cuántos códigos<input name="cantidad" type="number" min="1" max="50" value="1" required></label>
+          <label class="campo">Usos por código<input name="usos_max" type="number" min="1" max="500" value="1" required></label>
+          <label class="campo">Vence en días (opcional)<input name="dias_vigencia" type="number" min="1" max="365"></label>
+        </div>
+        <label class="campo">Nota (para quién es)<input name="nota" maxlength="160"></label>
+        <p class="error" data-error role="alert"></p>
+        <div><button class="boton" type="submit">Generar</button></div>
+      </form>
+      <div id="zona-codigos"></div>
+      <h2>Códigos</h2>
+      <div class="superficie desborde" style="padding:0"><table>
+        <thead><tr><th>Código</th><th>Nota</th><th>Usos</th><th>Vence</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${
+          codigos.length
+            ? codigos.map((c) => {
+                const vencido = c.expira_en && new Date(c.expira_en) < new Date();
+                const vigente = !c.revocado_en && !vencido && c.usos < c.usos_max;
+                return h`<tr>
+                  <td><code>${c.codigo}</code></td><td>${c.nota ?? ""}</td><td>${c.usos} de ${c.usos_max}</td><td>${c.expira_en ? fecha(c.expira_en) : "Sin vencimiento"}</td>
+                  <td>${c.revocado_en ? "Revocado" : vencido ? "Vencido" : c.usos >= c.usos_max ? "Agotado" : "Vigente"}</td>
+                  <td class="fila">${vigente ? h`<button class="boton secundario" data-accion="prueba-copiar" data-codigo="${c.codigo}">Copiar enlace</button><button class="boton discreto" data-accion="prueba-revocar" data-id="${c.id}">Revocar</button>` : ""}</td>
+                </tr>`;
+              })
+            : h`<tr><td colspan="6" class="tenue">Todavía no generas códigos.</td></tr>`
+        }</tbody>
+      </table></div>`),
+  );
+  alEnviar("#f-codigos", async ({ cantidad, usos_max, dias_vigencia, nota }) => {
+    const r = await api("POST", "/api/soporte/pruebas/codigos", {
+      cantidad: Number(cantidad),
+      usos_max: Number(usos_max),
+      dias_vigencia: dias_vigencia ? Number(dias_vigencia) : null,
+      nota,
+    });
+    await vistaPruebas();
+    pintar(
+      estado.raiz.querySelector("#zona-codigos"),
+      h`<div class="aviso pila-chica"><strong>Códigos nuevos. Compártelos con el enlace:</strong>
+        ${r.codigos.map((c) => h`<span><code>${c}</code> · <code>${enlacePrueba(c)}</code></span>`)}</div>`,
+    );
+  });
+}
+
+async function accionPrueba(boton) {
+  const id = boton.dataset.id;
+  if (boton.dataset.accion === "prueba-copiar") {
+    const enlace = enlacePrueba(boton.dataset.codigo);
+    await navigator.clipboard?.writeText(enlace).catch(() => {});
+    boton.textContent = "Copiado";
+    return;
+  }
+  boton.disabled = true;
+  try {
+    if (boton.dataset.accion === "prueba-revocar") {
+      if (!confirm("¿Revocar este código? Ya no se podrá usar.")) return;
+      await api("POST", `/api/soporte/pruebas/codigos/${id}/revocar`, {});
+      return vistaPruebas();
+    }
+    if (boton.dataset.accion === "prueba-rechazar") {
+      const nota = prompt("Motivo del rechazo (opcional, solo lo ves tú):");
+      if (nota === null) return;
+      await api("POST", `/api/soporte/pruebas/solicitudes/${id}/rechazar`, { nota });
+      return vistaPruebas();
+    }
+    if (boton.dataset.accion === "prueba-aprobar") {
+      const plan = estado.raiz.querySelector(`[data-plan-de="${id}"]`)?.value;
+      const r = await api("POST", `/api/soporte/pruebas/solicitudes/${id}/aprobar`, { plan });
+      await vistaPruebas();
+      pintar(
+        estado.raiz.querySelector("#zona-codigos"),
+        h`<div class="aviso pila-chica"><strong>Prueba autorizada hasta el ${fecha(r.pagado_hasta)}.</strong>
+          <span>${r.correo_enviado ? "Le enviamos el enlace de activación por correo." : "No se pudo enviar el correo. Mándale tú este enlace de activación (vence en 14 días y solo funciona una vez):"}</span>
+          ${r.enlace_activacion ? h`<code style="word-break:break-all">${r.enlace_activacion}</code>` : ""}</div>`,
+      );
+      estado.raiz.querySelector("#zona-codigos").scrollIntoView({ behavior: "smooth" });
+    }
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 export async function iniciarSoporte(raiz) {
   estado.raiz = raiz;
   raiz.addEventListener("click", async (e) => {
@@ -286,12 +425,14 @@ export async function iniciarSoporte(raiz) {
       e.preventDefault();
       if (destino.dataset.ir === "consultorios") await vistaConsultorios();
       if (destino.dataset.ir === "metricas") await vistaMetricas();
+      if (destino.dataset.ir === "pruebas") await vistaPruebas();
       if (destino.dataset.ir === "agentes") vistaAgentes();
       return;
     }
     const boton = e.target.closest("[data-accion]");
     if (!boton) return;
     if (boton.dataset.accion === "abrir") vistaMotivo(boton.dataset.id, boton.dataset.nombre);
+    if (boton.dataset.accion?.startsWith("prueba-")) await accionPrueba(boton);
     if (boton.dataset.accion === "salir") {
       await api("POST", "/api/soporte/salir", {}).catch(() => {});
       estado.usuario = null;

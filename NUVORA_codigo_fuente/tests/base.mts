@@ -1,6 +1,6 @@
 // Arnés de pruebas: Postgres real, con un dueño parecido al de un servicio administrado
 // (puede crear roles y saltarse RLS), para demostrar que el aislamiento no depende de su buena conducta.
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import pg from "pg";
 import { crearManejador, reiniciarVerificacionParaPruebas } from "../src/servidor/app.mts";
 import type { Dependencias, MensajeCorreo } from "../src/servidor/contexto.mts";
@@ -20,7 +20,11 @@ export async function crearEntorno(extra: Record<string, string> = {}, opciones:
   const url = new URL(ADMIN);
   url.pathname = `/${nombre}`;
   const pool = new pg.Pool({ connectionString: url.toString(), max: 8 });
-  await pool.query(readFileSync("netlify/database/migrations/20261102120000_esquema_inicial.sql", "utf8"));
+  // Las migraciones viven en la raíz del repositorio, una carpeta por versión, como las lee Netlify.
+  const MIGRACIONES = "../netlify/database/migrations";
+  for (const version of readdirSync(MIGRACIONES).sort()) {
+    await pool.query(readFileSync(`${MIGRACIONES}/${version}/migration.sql`, "utf8"));
+  }
   reiniciarVerificacionParaPruebas();
 
   const correos: MensajeCorreo[] = [];
