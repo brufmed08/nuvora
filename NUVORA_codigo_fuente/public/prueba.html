@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba gratis de 3 meses: NUVORA</title>
+<meta name="description" content="Pide tu prueba gratis de 3 meses de NUVORA, el expediente clínico que solo tu consultorio puede leer.">
+<link rel="stylesheet" href="/css/sigilo.css">
+<link rel="icon" type="image/png" href="/img/nuvora-icono.png">
+</head>
+<body class="pagina">
+<div class="envoltura">
+  <header class="cabecera">
+    <a class="logotipo" href="/"><img class="logo" src="/img/nuvora-logo.png" alt="NUVORA Health" width="145" height="46"></a>
+    <nav class="fila"><a class="boton secundario" href="/demo.html">Ver la demostración</a></nav>
+  </header>
+
+  <main class="heroe">
+    <div class="pila">
+      <h1>3 meses gratis de NUVORA, con tu código de invitación.</h1>
+      <p class="entrada">Cuéntanos qué necesita tu consultorio. Revisamos cada solicitud personalmente y, al autorizarla, te enviamos a tu correo el enlace para activar tu expediente.</p>
+      <ul class="puntos">
+        <li>Eliges el plan que quieres probar: Esencial, Profesional o Clínica.</li>
+        <li>No pedimos tarjeta y no se te cobra nada durante los 3 meses.</li>
+        <li>Al terminar puedes contratar tu plan. Si no, tus expedientes quedan en solo lectura y los puedes exportar.</li>
+      </ul>
+    </div>
+
+    <div id="zona-prueba">
+      <form id="f-prueba" class="superficie pila">
+        <h2>Solicitar mi prueba gratis</h2>
+        <label class="campo">Código de invitación<input id="prueba-codigo" name="codigo" required maxlength="40" autocomplete="off" placeholder="NUV-XXXX-XXXX" style="text-transform:uppercase"></label>
+        <label class="campo">Tu nombre completo<input id="prueba-nombre" name="nombre_medico" required maxlength="160" autocomplete="name"></label>
+        <label class="campo">Nombre del consultorio<input id="prueba-consultorio" name="nombre_consultorio" required maxlength="160" autocomplete="organization"></label>
+        <div class="rejilla">
+          <label class="campo">Correo<input id="prueba-correo" name="email" type="email" required autocomplete="email"></label>
+          <label class="campo">WhatsApp<input id="prueba-telefono" name="telefono" type="tel" required minlength="8" maxlength="20" autocomplete="tel"></label>
+        </div>
+        <div class="rejilla">
+          <label class="campo">Especialidad<input id="prueba-especialidad" name="especialidad" maxlength="80"></label>
+          <label class="campo">Ciudad<input id="prueba-ciudad" name="ciudad" maxlength="80" autocomplete="address-level2"></label>
+        </div>
+        <label class="campo">Plan que quieres probar<select id="prueba-plan" name="plan" required>
+          <option value="esencial">Esencial: 1 médico y 1 asistente</option>
+          <option value="profesional">Profesional: 1 médico, 2 asistentes, crecimiento OMS y enlaces para la familia</option>
+          <option value="clinica" selected>Clínica: hasta 5 médicos y 5 asistentes, todo incluido</option>
+        </select></label>
+        <label class="campo">¿Qué necesita tu consultorio?<textarea id="prueba-necesidades" name="necesidades" required minlength="10" maxlength="4000" rows="6" placeholder="Cuántos pacientes ves, qué usas hoy, qué te gustaría resolver: recetas, notas, curvas de crecimiento, asistentes…"></textarea></label>
+        <div class="oculto" aria-hidden="true"><label>Sitio web<input name="sitio_web" tabindex="-1" autocomplete="off"></label></div>
+        <label class="fila chico" style="flex-wrap:nowrap;align-items:flex-start"><input id="prueba-terminos" name="acepto" type="checkbox" required> <span>Acepto los <a href="/legal/terminos.html" target="_blank" rel="noopener">términos</a> y el <a href="/legal/privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a>.</span></label>
+        <p class="error" data-error role="alert"></p>
+        <div><button class="boton" type="submit">Enviar solicitud</button></div>
+        <p class="tenue chico">¿No tienes código? Pídelo a NUVORA o apúntate en la <a href="/fundadores.html">lista de fundadores</a>.</p>
+      </form>
+    </div>
+  </main>
+</div>
+
+<footer class="pie"><div class="envoltura fila-entre">
+  <span>NUVORA es un producto de NUVORA Health Technologies.</span>
+  <nav class="fila">
+    <a href="/legal/terminos.html">Términos</a>
+    <a href="/legal/privacidad.html">Aviso de privacidad</a>
+  </nav>
+</div></footer>
+<script type="module" src="/js/prueba.js"></script>
+</body>
+</html>

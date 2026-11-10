@@ -19,7 +19,7 @@ Expediente clínico electrónico por consultorio, de NUVORA Health Technologies.
 | Carpeta | Contenido |
 |---|---|
 | `netlify/functions/api.mts` | Función que atiende `/api/*` |
-| `netlify/database/migrations/` | Esquema, roles limitados y Row Level Security |
+| `../netlify/database/migrations/` (raíz del repositorio) | Esquema, roles limitados y Row Level Security, una carpeta por versión. Es la copia que aplica Netlify |
 | `src/servidor/` | Rutas, seguridad, planes y pagos |
 | `public/` | Sitio estático, sin dependencias externas: venta, expediente, soporte y documentos legales |
 | `public/js/cripto.js` | Cifrado en el navegador |
@@ -33,7 +33,7 @@ Requiere Node 20.12 o más reciente y Postgres. El dueño de la base debe poder 
 ```bash
 npm ci
 createdb sigilo_dev
-psql sigilo_dev -f netlify/database/migrations/20261102120000_esquema_inicial.sql
+for m in ../netlify/database/migrations/*/migration.sql; do psql sigilo_dev -f "$m"; done
 SIGILO_DB_URL=postgres://usuario:clave@127.0.0.1:5432/sigilo_dev PUERTO=8899 npx tsx scripts/servidor-local.mts
 ```
 
@@ -54,7 +54,7 @@ La prueba en navegador usa Playwright, que no está en `package.json`: instálal
 ## Desplegar en Netlify
 
 1. Crea un proyecto nuevo. No uses el sitio de tu consultorio.
-2. Activa Netlify Database. Las migraciones de `netlify/database/migrations/` se aplican al desplegar.
+2. Activa Netlify Database. Las migraciones de `netlify/database/migrations/` en la raíz del repositorio se aplican al desplegar.
 3. Define las variables de abajo.
 4. Despliega primero una versión de prueba. Las versiones de prueba pueden tener acceso a datos, así que no las compartas una vez que haya información real.
 5. Abre `/soporte.html#instalar`, escribe `SOPORTE_TOKEN_INSTALACION`, y guarda la contraseña y el segundo factor. Si se pierde esa contraseña, soporte ya no puede abrir los nombres.
@@ -82,6 +82,22 @@ La prueba en navegador usa Playwright, que no está en `package.json`: instálal
 ## Lista de fundadores y origen de las ventas
 
 La página es `/fundadores.html`. Un enlace de QR o de anuncio puede llevar su origen, por ejemplo `/fundadores.html?o=congreso-mazatlan-2026`. Solo se aceptan minúsculas, números y guiones. El administrador de soporte ve la lista y las altas por origen en **Métricas**.
+
+## Prueba gratis de 3 meses
+
+- Enlace de inscripción: `/prueba.html` (o `/prueba-gratis`). Con código incluido: `/prueba.html?codigo=NUV-XXXX-XXXX`.
+- Solo entra quien tenga un código. Los códigos los genera la cuenta maestra (administrador de soporte) en **Pruebas gratis**, en `/soporte.html` o `/maestro`.
+- Cada solicitud incluye las necesidades del consultorio y avisa por WhatsApp a la cuenta maestra. Nadie recibe acceso hasta que la cuenta maestra la autoriza; al autorizar se crea el consultorio con el plan elegido, gratis por 3 meses, y se envía el enlace de activación.
+- Al terminar la prueba aplica el flujo normal: días de gracia, solo lectura y renovación con pago.
+- El expediente de cada consultorio se abre en `/app.html` (o `/expediente`).
+
+| Variable | Para qué |
+|---|---|
+| `WHATSAPP_TOKEN` | Token de acceso de la API de WhatsApp Cloud de Meta |
+| `WHATSAPP_NUMERO_ID` | Identificador del número emisor (Phone number ID) |
+| `WHATSAPP_DESTINO` | Tu número con lada de país, por ejemplo `5216691234567` |
+| `WHATSAPP_PLANTILLA` | Opcional. Plantilla aprobada con un parámetro de cuerpo; sin ella, Meta solo entrega el aviso si le escribiste al número en las últimas 24 horas |
+| `WHATSAPP_PLANTILLA_IDIOMA` | Opcional. Idioma de la plantilla; por omisión `es_MX` |
 
 ## Marca
 

@@ -1,7 +1,7 @@
 // Punto de entrada del servidor: recibe un Request y devuelve un Response.
 // No depende de Netlify, así que las pruebas ejercitan exactamente este mismo código.
 import type { PoolClient } from "pg";
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import {
   enConsultorio,
   enCuentas,
@@ -34,7 +34,8 @@ import {
   procesarEvento,
 } from "./pagos/servicio.mts";
 import { firmarSimulado, marcarOrdenPagada, urlsSimuladas } from "./pagos/simulado.mts";
-import { PLANES, esCiclo, esPlan, estadoEfectivo, puedeEscribir, type Ciclo, type Plan } from "./planes.mts";
+import { PLANES, esCiclo, esPlan, estadoEfectivo, extenderPeriodo, puedeEscribir, type Ciclo, type Plan } from "./planes.mts";
+import { avisarWhatsApp } from "./whatsapp.mts";
 import {
   cifrarServidor,
   descifrarServidor,
@@ -98,6 +99,7 @@ function resumenConsultorio(fila: Record<string, any>, ahora: Date) {
     plan_nombre: plan.nombre,
     ciclo: fila.ciclo,
     estado,
+    en_prueba: fila.en_prueba === true,
     puede_escribir: puedeEscribir(estado),
     renovacion: fila.renovacion,
     pagado_hasta: fila.pagado_hasta,
@@ -1161,7 +1163,7 @@ const buscarConsultorios: Manejador = async (ctx) => {
   const patron = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
   const { rows } = await enRol(ctx.deps, "sigilo_soporte", {}, (c) =>
     c.query(
-      `SELECT id, nombre, plan, ciclo, estado, pagado_hasta, contacto_email, n_pacientes, ultima_actividad_en
+      `SELECT id, nombre, plan, ciclo, estado, en_prueba, pagado_hasta, contacto_email, n_pacientes, ultima_actividad_en
          FROM consultorios WHERE lower(nombre) LIKE $1 OR lower(contacto_email) LIKE $1
         ORDER BY ultima_actividad_en DESC NULLS LAST LIMIT 50`,
       [patron],
@@ -1232,6 +1234,240 @@ const listarFundadores: Manejador = async (ctx) => {
     c.query(`SELECT nombre, email, especialidad, ciudad, origen, creado_en FROM lista_fundadores ORDER BY creado_en LIMIT 5000`),
   );
   return json({ fundadores: rows });
+};
+
+// ---------------------------------------------------------------------------
+// Prueba gratis de 3 meses. Solo el administrador de soporte (cuenta maestra) genera códigos y autoriza.
+// ---------------------------------------------------------------------------
+
+const MESES_PRUEBA = 3;
+const ALFABETO_CODIGO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function finPrueba(desde: Date): Date {
+  let fin = desde;
+  for (let i = 0; i < MESES_PRUEBA; i++) fin = extenderPeriodo(fin, "mensual");
+  return fin;
+}
+
+function nuevoCodigoPrueba(): string {
+  const bloque = () => Array.from({ length: 4 }, () => ALFABETO_CODIGO[randomInt(ALFABETO_CODIGO.length)]).join("");
+  return `NUV-${bloque()}-${bloque()}`;
+}
+
+function limpiarCodigo(valor: unknown): string {
+  return texto(valor, "Código de prueba", { max: 40 }).toUpperCase().replace(/\s+/g, "");
+}
+
+async function exigirMaestro(ctx: Contexto): Promise<SesionSoporte> {
+  const s = await leerSoporte(ctx);
+  if (s.rol !== "administrador") throw new ErrorHttp(403, "sin_permiso", "Solo la cuenta maestra puede administrar las pruebas gratis.");
+  return s;
+}
+
+const solicitarPrueba: Manejador = async ({ req, deps, ip }) => {
+  const cuerpo = await leerCuerpo(req);
+  if (typeof cuerpo.sitio_web === "string" && cuerpo.sitio_web.trim() !== "") return json({ ok: true }, 201);
+  if (cuerpo.acepto_terminos !== true) {
+    throw new ErrorHttp(400, "terminos_pendientes", "Para continuar acepta los términos y el aviso de privacidad.");
+  }
+  const clave = claveAcceso("prueba", ip || "sin-ip");
+  await comprobarBloqueo(deps, clave);
+  const codigo = limpiarCodigo(cuerpo.codigo);
+  const correo = validarEmail(cuerpo.email);
+  const nombreMedico = texto(cuerpo.nombre_medico, "Tu nombre", { max: 160 });
+  const nombreConsultorio = texto(cuerpo.nombre_consultorio, "Nombre del consultorio", { max: 160 });
+  const telefono = texto(cuerpo.telefono, "WhatsApp o teléfono", { min: 8, max: 20 });
+  const especialidad = textoOpcional(cuerpo.especialidad, "Especialidad", 80);
+  const ciudad = textoOpcional(cuerpo.ciudad, "Ciudad", 80);
+  const necesidades = texto(cuerpo.necesidades, "Tus necesidades", { min: 10, max: 4000 });
+  const plan = cuerpo.plan;
+  if (!esPlan(plan)) throw new ErrorHttp(400, "dato_invalido", "Elige el plan que quieres probar.");
+
+  const solicitud = await enCuentas(deps, async (c) => {
+    const { rows } = await c.query(`SELECT * FROM codigos_prueba WHERE codigo = $1 FOR UPDATE`, [codigo]);
+    const fila = rows[0];
+    const ahora = deps.ahora().getTime();
+    if (!fila || fila.revocado_en || fila.usos >= fila.usos_max || (fila.expira_en && new Date(fila.expira_en).getTime() < ahora)) {
+      return null;
+    }
+    const enUso = await c.query(`SELECT 1 FROM usuarios WHERE email = $1`, [correo]);
+    if ((enUso.rowCount ?? 0) > 0) throw new ErrorHttp(409, "correo_en_uso", "Ese correo ya tiene una cuenta. Entra con él o usa otro.");
+    const pendiente = await c.query(`SELECT 1 FROM solicitudes_prueba WHERE email = $1 AND estado = 'pendiente'`, [correo]);
+    if ((pendiente.rowCount ?? 0) > 0) throw new ErrorHttp(409, "solicitud_pendiente", "Ya tienes una solicitud en revisión con ese correo. Te avisaremos pronto.");
+    await c.query(`UPDATE codigos_prueba SET usos = usos + 1 WHERE id = $1`, [fila.id]);
+    const insertada = await c.query(
+      `INSERT INTO solicitudes_prueba (codigo_id, email, nombre_medico, nombre_consultorio, telefono, especialidad, ciudad, plan, necesidades, acepto_terminos_en)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      [fila.id, correo, nombreMedico, nombreConsultorio, telefono, especialidad, ciudad, plan, necesidades, deps.ahora()],
+    );
+    return { id: insertada.rows[0].id as string };
+  });
+  if (!solicitud) {
+    await registrarFallo(deps, clave);
+    throw new ErrorHttp(400, "codigo_invalido", "El código no es válido, ya se usó o venció. Pídele uno nuevo a NUVORA.");
+  }
+
+  const base = urlBase(deps, req);
+  const aviso = await avisarWhatsApp(
+    deps,
+    [
+      "NUVORA: nueva solicitud de prueba gratis de 3 meses.",
+      `${nombreMedico}, ${nombreConsultorio}${ciudad ? ` (${ciudad})` : ""}`,
+      `Plan: ${PLANES[plan].nombre}${especialidad ? ` · ${especialidad}` : ""}`,
+      `Tel: ${telefono} · ${correo}`,
+      `Código: ${codigo}`,
+      `Necesidades: ${necesidades.length > 600 ? `${necesidades.slice(0, 600)}…` : necesidades}`,
+      `Autoriza o rechaza aquí: ${base}/soporte.html#pruebas`,
+    ].join("\n"),
+  );
+  await enCuentas(deps, (c) => c.query(`UPDATE solicitudes_prueba SET aviso_whatsapp = $2 WHERE id = $1`, [solicitud.id, aviso]));
+  await enviarCorreo(deps, {
+    para: correo,
+    asunto: "Recibimos tu solicitud de prueba gratis de NUVORA",
+    texto: `Hola, ${nombreMedico}.\n\nRecibimos tu solicitud de 3 meses gratis para ${nombreConsultorio}. La revisamos personalmente y te escribiremos a este correo con el enlace para activar tu expediente.\n\nNo se te cobra nada.\n\nNUVORA Health Technologies`,
+  }).catch((error) => console.error("No se pudo enviar la confirmación de prueba:", (error as Error).message));
+  return json({ ok: true }, 201);
+};
+
+const listarCodigosPrueba: Manejador = async (ctx) => {
+  await exigirMaestro(ctx);
+  const { rows } = await enCuentas(ctx.deps, (c) =>
+    c.query(`SELECT id, codigo, nota, usos, usos_max, expira_en, revocado_en, creado_en FROM codigos_prueba ORDER BY creado_en DESC LIMIT 500`),
+  );
+  return json({ codigos: rows });
+};
+
+const generarCodigosPrueba: Manejador = async (ctx) => {
+  const s = await exigirMaestro(ctx);
+  const cuerpo = await leerCuerpo(ctx.req);
+  const cantidad = entero(cuerpo.cantidad ?? 1, "Cantidad", 1, 50);
+  const usosMax = entero(cuerpo.usos_max ?? 1, "Usos por código", 1, 500);
+  const nota = textoOpcional(cuerpo.nota, "Nota", 160);
+  const dias = cuerpo.dias_vigencia === undefined || cuerpo.dias_vigencia === null ? null : entero(cuerpo.dias_vigencia, "Días de vigencia", 1, 365);
+  const expira = dias ? new Date(ctx.deps.ahora().getTime() + dias * 86400000) : null;
+  const creados = await enCuentas(ctx.deps, async (c) => {
+    const salida: string[] = [];
+    while (salida.length < cantidad) {
+      const codigo = nuevoCodigoPrueba();
+      const { rowCount } = await c.query(
+        `INSERT INTO codigos_prueba (codigo, nota, usos_max, expira_en, creado_por) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (codigo) DO NOTHING`,
+        [codigo, nota, usosMax, expira, s.soporteId],
+      );
+      if (rowCount) salida.push(codigo);
+    }
+    return salida;
+  });
+  return json({ codigos: creados }, 201);
+};
+
+const revocarCodigoPrueba: Manejador = async (ctx) => {
+  await exigirMaestro(ctx);
+  const id = uuid(ctx.parametros.id);
+  const { rowCount } = await enCuentas(ctx.deps, (c) =>
+    c.query(`UPDATE codigos_prueba SET revocado_en = $2 WHERE id = $1 AND revocado_en IS NULL`, [id, ctx.deps.ahora()]),
+  );
+  if (!rowCount) throw new ErrorHttp(404, "no_encontrado", "No encontramos este código o ya estaba revocado.");
+  return json({ ok: true });
+};
+
+const listarSolicitudesPrueba: Manejador = async (ctx) => {
+  await exigirMaestro(ctx);
+  const { rows } = await enCuentas(ctx.deps, (c) =>
+    c.query(
+      `SELECT sp.id, sp.email, sp.nombre_medico, sp.nombre_consultorio, sp.telefono, sp.especialidad, sp.ciudad, sp.plan, sp.necesidades,
+              sp.estado, sp.aviso_whatsapp, sp.revisado_en, sp.nota_revision, sp.creado_en, cp.codigo, co.pagado_hasta
+         FROM solicitudes_prueba sp
+         JOIN codigos_prueba cp ON cp.id = sp.codigo_id
+         LEFT JOIN consultorios co ON co.id = sp.consultorio_id
+        ORDER BY (sp.estado = 'pendiente') DESC, sp.creado_en DESC LIMIT 500`,
+    ),
+  );
+  return json({ solicitudes: rows });
+};
+
+const aprobarPrueba: Manejador = async (ctx) => {
+  const s = await exigirMaestro(ctx);
+  const { deps, req } = ctx;
+  const id = uuid(ctx.parametros.id);
+  const cuerpo = await leerCuerpo(req);
+  if (cuerpo.plan !== undefined && !esPlan(cuerpo.plan)) throw new ErrorHttp(400, "dato_invalido", "Elige un plan válido.");
+  if (!(await obtenerLlaveSoporte(deps))) {
+    throw new ErrorHttp(503, "plataforma_no_lista", "Instala primero el panel de soporte.");
+  }
+  const ahora = deps.ahora();
+  const hasta = finPrueba(ahora);
+  const alta = await enCuentas(deps, async (c) => {
+    const { rows } = await c.query(`SELECT * FROM solicitudes_prueba WHERE id = $1 FOR UPDATE`, [id]);
+    const sol = rows[0];
+    if (!sol) throw new ErrorHttp(404, "no_encontrado", "No encontramos esta solicitud.");
+    if (sol.estado !== "pendiente") throw new ErrorHttp(409, "ya_revisada", "Esta solicitud ya fue revisada.");
+    const enUso = await c.query(`SELECT 1 FROM usuarios WHERE email = $1`, [sol.email]);
+    if ((enUso.rowCount ?? 0) > 0) throw new ErrorHttp(409, "correo_en_uso", "Ese correo ya tiene una cuenta.");
+    const plan = (cuerpo.plan ?? sol.plan) as Plan;
+    const consultorioId = randomUUID();
+    const usuarioId = randomUUID();
+    await c.query(
+      `INSERT INTO consultorios (id, nombre, plan, ciclo, estado, renovacion, pagado_hasta, contacto_email, en_prueba)
+       VALUES ($1, $2, $3, 'mensual', 'pendiente_activacion', 'manual', $4, $5, true)`,
+      [consultorioId, sol.nombre_consultorio, plan, hasta, sol.email],
+    );
+    await c.query(`INSERT INTO usuarios (id, consultorio_id, email, nombre, rol) VALUES ($1, $2, $3, $4, 'titular')`, [
+      usuarioId,
+      consultorioId,
+      sol.email,
+      sol.nombre_medico,
+    ]);
+    await c.query(
+      `UPDATE solicitudes_prueba SET estado = 'aprobada', plan = $2, revisado_por = $3, revisado_en = $4, consultorio_id = $5 WHERE id = $1`,
+      [id, plan, s.soporteId, ahora, consultorioId],
+    );
+    await c.query(`INSERT INTO bitacora (consultorio_id, usuario_id, accion) VALUES ($1, $2, 'prueba_autorizada')`, [consultorioId, usuarioId]);
+    return { consultorioId, plan, email: sol.email as string, nombre: sol.nombre_medico as string, consultorio: sol.nombre_consultorio as string };
+  });
+  const activacion = await nuevaActivacionPendiente(deps, alta.consultorioId);
+  const enlace = activacion ? `${urlBase(deps, req)}/app.html#activar/${activacion.token}` : null;
+  let correoEnviado = false;
+  if (enlace) {
+    correoEnviado = await enviarCorreo(deps, {
+      para: alta.email,
+      asunto: "Tu prueba gratis de NUVORA fue autorizada",
+      texto: [
+        `Hola, ${alta.nombre}.`,
+        "",
+        `Autorizamos tu prueba gratis del plan ${PLANES[alta.plan].nombre} para ${alta.consultorio}. Dura 3 meses, hasta el ${hasta.toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}, y no se te cobra nada.`,
+        "",
+        "Abre este enlace para crear tu contraseña y entrar. Vence en 14 días y solo funciona una vez:",
+        enlace,
+        "",
+        "Durante la activación recibirás un código de recuperación. Guárdalo en un lugar seguro: nadie más, ni nuestro equipo de soporte, puede recuperar tus expedientes sin él.",
+      ].join("\n"),
+    })
+      .then(() => true)
+      .catch((error) => {
+        console.error("No se pudo enviar el correo de prueba autorizada:", (error as Error).message);
+        return false;
+      });
+  }
+  return json({ ok: true, pagado_hasta: hasta, enlace_activacion: enlace, correo_enviado: correoEnviado });
+};
+
+const rechazarPrueba: Manejador = async (ctx) => {
+  const s = await exigirMaestro(ctx);
+  const id = uuid(ctx.parametros.id);
+  const cuerpo = await leerCuerpo(ctx.req);
+  const nota = textoOpcional(cuerpo.nota, "Nota", 300);
+  await enCuentas(ctx.deps, async (c) => {
+    const { rows } = await c.query(`SELECT estado, codigo_id FROM solicitudes_prueba WHERE id = $1 FOR UPDATE`, [id]);
+    if (!rows[0]) throw new ErrorHttp(404, "no_encontrado", "No encontramos esta solicitud.");
+    if (rows[0].estado !== "pendiente") throw new ErrorHttp(409, "ya_revisada", "Esta solicitud ya fue revisada.");
+    await c.query(
+      `UPDATE solicitudes_prueba SET estado = 'rechazada', revisado_por = $2, revisado_en = $3, nota_revision = $4 WHERE id = $1`,
+      [id, s.soporteId, ctx.deps.ahora(), nota],
+    );
+    // El uso del código se devuelve: un rechazo no lo gasta.
+    await c.query(`UPDATE codigos_prueba SET usos = greatest(usos - 1, 0) WHERE id = $1`, [rows[0].codigo_id]);
+  });
+  return json({ ok: true });
 };
 
 // ---------------------------------------------------------------------------
@@ -1324,6 +1560,13 @@ const RUTAS: Ruta[] = [
   ruta("POST", "/api/soporte/consultorios/:id/pacientes", pacientesSoporte),
   ruta("GET", "/api/soporte/metricas", metricasSoporte),
   ruta("GET", "/api/soporte/fundadores", listarFundadores),
+  ruta("POST", "/api/prueba/solicitar", solicitarPrueba),
+  ruta("GET", "/api/soporte/pruebas/codigos", listarCodigosPrueba),
+  ruta("POST", "/api/soporte/pruebas/codigos", generarCodigosPrueba),
+  ruta("POST", "/api/soporte/pruebas/codigos/:id/revocar", revocarCodigoPrueba),
+  ruta("GET", "/api/soporte/pruebas/solicitudes", listarSolicitudesPrueba),
+  ruta("POST", "/api/soporte/pruebas/solicitudes/:id/aprobar", aprobarPrueba),
+  ruta("POST", "/api/soporte/pruebas/solicitudes/:id/rechazar", rechazarPrueba),
   ruta("GET", "/api/simulador/orden", simuladorOrden),
   ruta("POST", "/api/simulador/pagar", simuladorPagar),
 ];

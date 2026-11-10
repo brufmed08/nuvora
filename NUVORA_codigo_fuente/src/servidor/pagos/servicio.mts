@@ -195,7 +195,7 @@ async function aplicarRenovacion(
   const base = actual.getTime() > ahora.getTime() ? actual : ahora;
   const hasta = extenderPeriodo(base, consultorio.ciclo);
   const estado = consultorio.estado === "pendiente_activacion" ? "pendiente_activacion" : "activo";
-  await c.query(`UPDATE consultorios SET pagado_hasta = $2, estado = $3, actualizado_en = now() WHERE id = $1`, [
+  await c.query(`UPDATE consultorios SET pagado_hasta = $2, estado = $3, en_prueba = false, actualizado_en = now() WHERE id = $1`, [
     consultorio.id,
     hasta,
     estado,

@@ -1093,7 +1093,7 @@ async function vistaCuenta() {
     marco(h`${pestanasAjustes("ajustes-cuenta")}
       <div class="superficie pila">
         <div class="fila-entre"><h2>Plan ${consultorio.plan_nombre}, ${consultorio.ciclo}</h2><span class="insignia ${consultorio.puede_escribir ? "ok" : "alerta"}">${ESTADOS[consultorio.estado]}</span></div>
-        <p>Pagado hasta el <strong>${fecha(consultorio.pagado_hasta)}</strong>. Renovación ${consultorio.renovacion === "automatica" ? "automática con tarjeta" : "manual"}.</p>
+        <p>${consultorio.en_prueba ? h`Prueba gratis hasta el <strong>${fecha(consultorio.pagado_hasta)}</strong>. Para seguir después, contrata tu plan aquí abajo.` : h`Pagado hasta el <strong>${fecha(consultorio.pagado_hasta)}</strong>.`} Renovación ${consultorio.renovacion === "automatica" ? "automática con tarjeta" : "manual"}.</p>
       </div>
       <form id="f-renovar" class="superficie pila">
         <h2>Renovar o cambiar de plan</h2>
